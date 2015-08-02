@@ -1,0 +1,94 @@
+<?php
+
+/**
+ * @file
+ * This file defines all the necessary hooks and functions to create
+ * a test cases.
+ */
+
+/**
+ * Implements hook_help().
+ */
+function axelerant_test_cases_help($path, $arg) {
+  $output = '';
+  switch ($path) {
+    case 'admin/help#axeerant_test_cases':
+      $task['items'] = array(
+        t('Add a textbox in the site details section, below the Site API Key textfield. The name of the textbox should be Site API Key.'),
+        t('Change Save configuration button to Update Configuration'),
+        t('This module also provides a URL that responds with a JSON representation of a given node with the content type "page" only if the previously submitted API Key and a node id (nid) of an appropriate node are present')
+      );
+      $output = "<h1>" . t('Help to test different kind scenario') . "</h1>"
+        . theme('item_list', $task);
+    break;
+  }
+  return $output;
+}
+
+/**
+ * Implements hook_menu().
+ */
+function axelerant_test_cases_menu() {
+  $items = array();
+
+  $items['page_json/%/%'] = array(
+    'title' => 'Node JSON Information',
+    'description' => 'Node JSON information',
+    'page callback' => 'node_json_information',
+    'page arguments' => array(1,2),
+    'access arguments' => array('access content'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function axelerant_test_cases_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == "system_site_information_settings") {
+    //print "<pre>";print_r($form);print "</pre>";
+    // Site API Key for json validation.
+    $form['site_information']['siteapikey'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Site API Key'),
+      '#default_value' => variable_get('siteapikey', 'No API Key yet'),
+      '#required' => TRUE,
+      '#description' => t('Please add your Site API Key for node json validation.'),
+    );
+    // Changing name of submit button to Update Configuration
+    $form['actions']['submit']['#value'] = t('Update configuration');
+    $form['#submit'] = array('axelerant_test_cases_settings_form_submit'
+    );
+  }
+}
+
+/**
+ * Implements axelerant_test_cases_settings_form_submit(). to show status message for site api key.
+ */
+function axelerant_test_cases_settings_form_submit($form, &$form_state) {
+  if (!empty($form_state['values']['siteapikey'])) {
+  drupal_set_message(
+      t('The Site API Key has been saved with that value @value.',
+      array('@value' => $form_state['values']['siteapikey'])),
+      'status');
+  }
+}
+/**
+ * Implements node_json_information(). To show json data for content type "page"
+ */
+function node_json_information($site_key, $node_id) {
+  // Load node of page content type.
+  $node = node_load_multiple(
+    array($node_id),
+    array('type' => 'page')
+  );
+  if(!empty($node) && variable_get('siteapikey') == $site_key) {
+    return drupal_json_output($node);
+  }
+  else {
+    drupal_access_denied();
+  }
+}
+?>
